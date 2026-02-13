@@ -48,6 +48,19 @@ function AdminLoginContent() {
     setIsLoading(true);
 
     try {
+      // Check if email is in admin list before sending magic link
+      const checkRes = await fetch('/api/auth/verify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const checkData = await checkRes.json();
+      if (!checkData.isAdmin) {
+        setError('This email is not authorized to access the admin panel.');
+        setIsLoading(false);
+        return;
+      }
+
       const { error: signInError } = await signInWithMagicLink(email, '/admin');
       if (signInError) {
         setError(signInError.message);

@@ -224,7 +224,7 @@ export default function SavePromoPage() {
                   <span>✗</span> <span className="line-through">Email reminders</span>
                 </li>
                 <li className="flex items-center gap-2 text-gray-400">
-                  <span>✗</span> <span className="line-through">Calendar sync (Google/Apple)</span>
+                  <span>✗</span> <span className="line-through">Calendar export (iOS/Android)</span>
                 </li>
               </ul>
               <button
@@ -261,7 +261,7 @@ export default function SavePromoPage() {
                   <span className="text-blue-500">✓</span> Email reminders before registration
                 </li>
                 <li className="flex items-center gap-2 text-gray-700">
-                  <span className="text-blue-500">✓</span> Sync to Google/Apple Calendar
+                  <span className="text-blue-500">✓</span> Export to iOS/Android calendar
                 </li>
                 <li className="flex items-center gap-2 text-gray-700">
                   <span className="text-blue-500">✓</span> Family sharing (2 accounts)

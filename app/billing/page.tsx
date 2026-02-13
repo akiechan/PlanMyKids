@@ -935,7 +935,7 @@ export default function BillingPage() {
                     <li>- Unlimited saved programs</li>
                     <li>- Unlimited child profiles</li>
                     <li>- Email reminders before registration</li>
-                    <li>- Sync to Google/Apple Calendar</li>
+                    <li>- Export to iOS/Android calendar</li>
                     <li>- Family sharing (2 accounts)</li>
                     <li>- Priority support</li>
                   </ul>

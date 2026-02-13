@@ -272,7 +272,7 @@ export default function ComparePage() {
 
   const handleSave = async () => {
     if (!user) {
-      router.push('/premium?return=/compare&action=save');
+      router.push('/login?next=/compare');
       return;
     }
 

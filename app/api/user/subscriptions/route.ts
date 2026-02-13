@@ -111,8 +111,8 @@ export async function GET(request: NextRequest) {
             plan: 'pro',
             status: plannerSub.cancel_at_period_end ? 'cancelling' : plannerSub.status,
             billingCycle: isYearly ? 'yearly' : 'monthly',
-            nextBillingDate: plannerSub.current_period_end
-              ? new Date(plannerSub.current_period_end * 1000).toISOString()
+            nextBillingDate: (plannerSub as any).current_period_end
+              ? new Date((plannerSub as any).current_period_end * 1000).toISOString()
               : null,
             price: isYearly ? 65 : 8.5,
             cancelAtPeriodEnd: plannerSub.cancel_at_period_end || false,
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
               'Unlimited saved programs',
               'Unlimited child profiles',
               'Email reminders before registration',
-              'Sync to Google/Apple Calendar',
+              'Export to iOS/Android calendar',
               'Family sharing (2 accounts)',
               'Priority support',
             ],

@@ -204,7 +204,7 @@ function PremiumContent() {
             </li>
             <li className="flex items-start gap-2">
               <span>🗓️</span>
-              <span>Sync to Google/Apple Calendar</span>
+              <span>Export to iOS/Android calendar</span>
             </li>
             <li className="flex items-start gap-2">
               <span>👥</span>

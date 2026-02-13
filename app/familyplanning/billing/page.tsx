@@ -36,7 +36,7 @@ const PLANS = {
       'Unlimited saved programs',
       'Unlimited child profiles',
       'Email reminders before registration',
-      'Sync to Google/Apple Calendar',
+      'Export to iOS/Android calendar',
       'Family sharing (2 accounts)',
       'Priority support',
     ],

@@ -47,3 +47,12 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ isAdmin: true, email: userEmail });
 }
+
+export async function POST(request: NextRequest) {
+  const { email } = await request.json();
+  if (!email) {
+    return NextResponse.json({ isAdmin: false }, { status: 400 });
+  }
+  const isAdmin = ADMIN_EMAILS.includes(email.trim().toLowerCase());
+  return NextResponse.json({ isAdmin });
+}

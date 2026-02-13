@@ -90,22 +90,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Admin authentication temporarily disabled for development
-  // TODO: Re-enable admin auth before production
-  // if (isAdminRoute && !isAdminLoginPage) {
-  //   if (!session) {
-  //     const loginUrl = new URL('/admin/login', request.url);
-  //     return NextResponse.redirect(loginUrl);
-  //   }
-  //   const userEmail = session.user.email?.toLowerCase();
-  //   const isAdmin = userEmail && ADMIN_EMAILS.includes(userEmail);
-  //   if (!isAdmin) {
-  //     await supabase.auth.signOut();
-  //     const loginUrl = new URL('/admin/login', request.url);
-  //     loginUrl.searchParams.set('error', 'not_authorized');
-  //     return NextResponse.redirect(loginUrl);
-  //   }
-  // }
+  // Admin routes require login + admin email
+  if (isAdminRoute && !isAdminLoginPage) {
+    if (!session) {
+      const loginUrl = new URL('/admin/login', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    const userEmail = session.user.email?.toLowerCase();
+    const isAdmin = userEmail && ADMIN_EMAILS.includes(userEmail);
+    if (!isAdmin) {
+      const loginUrl = new URL('/admin/login', request.url);
+      loginUrl.searchParams.set('error', 'not_authorized');
+      return NextResponse.redirect(loginUrl);
+    }
+  }
 
   // Redirect away from login pages if already authenticated
   if (isFeaturedLogin && session) {

@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = getSupabaseClient();
+  const defaultRegion = await getDefaultRegion();
   const results: Array<{
     programId: string;
     name: string;

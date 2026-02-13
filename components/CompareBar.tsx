@@ -82,7 +82,7 @@ export default function CompareBar() {
           <div className="flex items-center gap-3">
             {isFull && userTier === 'free' && (
               <Link
-                href="/premium"
+                href="/familyplanning/billing"
                 className="text-xs text-primary-100 hover:text-white transition-colors hidden sm:block"
               >
                 Max {maxPrograms} reached. Upgrade for more →

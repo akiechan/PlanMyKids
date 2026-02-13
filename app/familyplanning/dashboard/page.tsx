@@ -20,6 +20,7 @@ import { useGridColumns } from '@/hooks/useGridColumns';
 import GridSizeControl from '@/components/GridSizeControl';
 import SortableCardList from '@/components/SortableCardList';
 import SortableCard from '@/components/SortableCard';
+import { generateRegistrationEvent, generateRecurringEvents, downloadICS } from '@/lib/calendar-export';
 
 const getAgeFromBirthday = (birthday: string): number => {
   if (!birthday) return 0;
@@ -610,6 +611,12 @@ export default function SaveDashboardPage() {
     // Validate: kids must be assigned
     if (kids.length > 0 && enrollForm.assignedKids.length === 0) {
       setEnrollValidationError('Please assign at least one kid to this program.');
+      return;
+    }
+
+    // Session dates are mandatory
+    if (!enrollForm.sessionStartDate || !enrollForm.sessionEndDate) {
+      setEnrollValidationError('Please set both session start and end dates.');
       return;
     }
 
@@ -2138,7 +2145,7 @@ export default function SaveDashboardPage() {
                 Your existing data is preserved, but you won&apos;t be able to add more until you upgrade.
               </p>
               <Link
-                href="/premium"
+                href="/familyplanning/billing"
                 className="inline-block mt-2 text-sm font-medium text-red-700 underline hover:text-red-900"
               >
                 Upgrade to Pro
@@ -3050,7 +3057,7 @@ export default function SaveDashboardPage() {
                     <span>✓</span> Email reminders
                   </li>
                   <li className="flex items-center gap-2">
-                    <span>✓</span> Calendar sync
+                    <span>✓</span> Export to calendar
                   </li>
                 </ul>
                 <Link
@@ -3374,6 +3381,18 @@ export default function SaveDashboardPage() {
                                   >
                                     💡
                                   </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (subscription?.plan !== 'pro') { router.push('/familyplanning/billing'); return; }
+                                      const ics = generateRegistrationEvent({ ...program, re_enrollment_date: null });
+                                      if (ics) { const slug = program.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30); downloadICS(`registration-${slug}`, ics); }
+                                    }}
+                                    className={`ml-0.5 transition-colors ${subscription?.plan !== 'pro' ? 'text-gray-300 hover:text-gray-400' : 'text-blue-400 hover:text-blue-600'}`}
+                                    title={subscription?.plan !== 'pro' ? 'Upgrade to Pro to export' : 'Add to calendar'}
+                                  >
+                                    🗓️
+                                  </button>
                                 </div>
                                 {reminderTooltip === `${program.id}-registration` && (
                                   <div className="absolute left-0 top-full mt-1 bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50">
@@ -3394,6 +3413,18 @@ export default function SaveDashboardPage() {
                                     title={reminders[program.id]?.re_enrollment ? 'Reminder on' : 'Set reminder'}
                                   >
                                     💡
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (subscription?.plan !== 'pro') { router.push('/familyplanning/billing'); return; }
+                                      const ics = generateRegistrationEvent({ ...program, new_registration_date: null });
+                                      if (ics) { const slug = program.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30); downloadICS(`re-enrollment-${slug}`, ics); }
+                                    }}
+                                    className={`ml-0.5 transition-colors ${subscription?.plan !== 'pro' ? 'text-gray-300 hover:text-gray-400' : 'text-purple-400 hover:text-purple-600'}`}
+                                    title={subscription?.plan !== 'pro' ? 'Upgrade to Pro to export' : 'Add to calendar'}
+                                  >
+                                    🗓️
                                   </button>
                                 </div>
                                 {reminderTooltip === `${program.id}-re_enrollment` && (
@@ -3776,6 +3807,33 @@ export default function SaveDashboardPage() {
                             );
                           })()}
                         </div>
+
+                        {/* Calendar export button */}
+                        {program.sessionStartDate && program.sessionEndDate && (
+                          <div className="mt-1.5 sm:mt-2">
+                            <button
+                              onClick={() => {
+                                if (subscription?.plan !== 'pro') {
+                                  router.push('/familyplanning/billing');
+                                  return;
+                                }
+                                const ics = generateRecurringEvents(program);
+                                if (ics) {
+                                  const slug = program.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+                                  downloadICS(`schedule-${slug}`, ics);
+                                }
+                              }}
+                              title={subscription?.plan !== 'pro' ? 'Upgrade to Pro to export to calendar' : 'Export recurring schedule to calendar'}
+                              className={`inline-flex items-center gap-1 px-2 py-1 border rounded-lg text-xs font-medium transition-colors ${
+                                subscription?.plan !== 'pro'
+                                  ? 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                                  : 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100'
+                              }`}
+                            >
+                              📅 Add to Calendar
+                            </button>
+                          </div>
+                        )}
 
                         {/* Inline edit for current programs */}
                         {editingProgram === program.id && (
@@ -4550,7 +4608,7 @@ export default function SaveDashboardPage() {
                 onEndChange={v => setEnrollForm(prev => ({ ...prev, sessionEndDate: v }))}
                 fixedPosition
               />
-              <p className="text-xs text-gray-400 mt-1">Optional</p>
+              <p className="text-xs text-red-400 mt-1">* Required</p>
             </div>
 
             {/* Cost toggle */}
@@ -4608,7 +4666,7 @@ export default function SaveDashboardPage() {
             <span className="text-2xl">✨</span>
             <div>
               <p className="font-medium">Upgrade to Family Pro</p>
-              <p className="text-sm text-blue-200">Unlimited saves, email reminders, calendar sync</p>
+              <p className="text-sm text-blue-200">Unlimited saves, email reminders, calendar export</p>
             </div>
           </div>
           <Link
