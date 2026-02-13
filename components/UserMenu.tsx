@@ -116,9 +116,9 @@ export default function UserMenu() {
 
           <div className="border-t border-gray-100 mt-1">
             <button
-              onClick={() => {
+              onClick={async () => {
                 setIsOpen(false);
-                signOut();
+                await signOut();
                 window.location.href = '/';
               }}
               className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
