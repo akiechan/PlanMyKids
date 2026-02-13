@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer components {
+  /* Mobile-first button sizes - larger touch targets on mobile */
+  .btn-primary {
+    @apply bg-primary-600 text-white px-4 py-3 sm:py-2 rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors font-medium min-h-[44px] sm:min-h-0;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 px-4 py-3 sm:py-2 rounded-lg hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium min-h-[44px] sm:min-h-0;
+  }
+
+  .input-field {
+    @apply border border-gray-300 rounded-lg px-4 py-3 sm:py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent min-h-[44px] sm:min-h-0;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-100;
+  }
+
+  /* Touch-friendly minimum sizes */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Responsive text utilities */
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl lg:text-3xl;
+  }
+
+  .text-responsive-2xl {
+    @apply text-2xl sm:text-3xl lg:text-4xl;
+  }
+
+  .text-responsive-3xl {
+    @apply text-3xl sm:text-4xl lg:text-5xl;
+  }
+
+  /* Responsive spacing */
+  .section-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .card-padding {
+    @apply p-4 sm:p-6;
+  }
+}
