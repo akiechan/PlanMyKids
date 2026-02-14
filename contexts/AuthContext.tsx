@@ -22,12 +22,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Sync client-side session to server cookies so middleware/API routes can see it
+    const syncSessionToCookies = async (sess: Session) => {
+      try {
+        await fetch('/api/auth/set-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: sess.access_token,
+            refresh_token: sess.refresh_token,
+          }),
+        });
+      } catch {
+        // Silent fail — cookie sync is best-effort
+      }
+    };
+
     // Get initial session
     const getInitialSession = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
+        // Sync to server cookies on initial load
+        if (initialSession) {
+          syncSessionToCookies(initialSession);
+        }
       } catch (error) {
         console.error('Error getting session:', error);
       } finally {
@@ -40,10 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log('Auth state changed:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setLoading(false);
+        // Sync to server cookies when session changes (sign in, token refresh)
+        if (currentSession && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          syncSessionToCookies(currentSession);
+        }
       }
     );
 
