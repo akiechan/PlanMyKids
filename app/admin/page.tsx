@@ -113,9 +113,15 @@ const categories = [
   },
   {
     title: 'Analytics & History',
-    description: 'Activity logs and system tools',
+    description: 'Activity logs, subscriptions, and system tools',
     color: 'amber',
     links: [
+      {
+        href: '/admin/featured',
+        title: 'Featured Programs',
+        description: 'View featured subscriptions and contacts',
+        icon: '⭐',
+      },
       {
         href: '/admin/activity',
         title: 'Activity Log',

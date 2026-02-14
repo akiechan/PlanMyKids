@@ -299,10 +299,18 @@ function FeaturedSetupContent() {
         logoUrl = await uploadLogo();
       }
 
+      // Get current session token for auth
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+
       // Create checkout session
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentSession?.access_token && {
+            'Authorization': `Bearer ${currentSession.access_token}`,
+          }),
+        },
         body: JSON.stringify({
           programId: selectedProgramId,
           programData: isNewProgram ? programData : {

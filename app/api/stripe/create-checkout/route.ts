@@ -7,9 +7,19 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
 
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // Get authenticated user — try cookies first, then Authorization header
+    let user = (await supabase.auth.getUser()).data.user;
+
+    if (!user) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        const { data } = await supabase.auth.getUser(token);
+        user = data.user;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
