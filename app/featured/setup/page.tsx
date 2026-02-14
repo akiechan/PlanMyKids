@@ -67,7 +67,10 @@ function FeaturedSetupContent() {
   // Load existing programs and check for localStorage data
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user) {
+        setLoadingPrograms(false);
+        return;
+      }
 
       // Load existing programs
       try {
