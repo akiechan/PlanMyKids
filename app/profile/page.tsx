@@ -6,12 +6,28 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
+interface FeaturedSub {
+  id: string;
+  program_name: string;
+  plan_type: string;
+  status: string;
+}
+
+interface FamilyPlanner {
+  plan: string;
+  status: string;
+  billingCycle?: string;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [fullName, setFullName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [featuredSubs, setFeaturedSubs] = useState<FeaturedSub[]>([]);
+  const [familyPlanner, setFamilyPlanner] = useState<FamilyPlanner | null>(null);
+  const [subsLoading, setSubsLoading] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -23,6 +39,28 @@ export default function ProfilePage() {
     if (user) {
       setFullName(user.user_metadata?.full_name || user.user_metadata?.name || '');
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchSubs = async () => {
+      try {
+        const res = await fetch('/api/user/subscriptions');
+        if (res.ok) {
+          const data = await res.json();
+          const active = (data.featuredSubscriptions || []).filter(
+            (s: FeaturedSub) => ['active', 'trialing'].includes(s.status)
+          );
+          setFeaturedSubs(active);
+          setFamilyPlanner(data.familyPlanner || null);
+        }
+      } catch {
+        // silent
+      } finally {
+        setSubsLoading(false);
+      }
+    };
+    fetchSubs();
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,12 +177,49 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-600 mb-4">
               Signed in as <span className="font-medium">{user.email}</span>
             </p>
-            <Link
-              href="/featured/setup"
-              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+
+            {/* Family Planning Plan */}
+            <div className="mb-5">
+              <p className="text-sm text-gray-500 mb-1">Family Planning</p>
+              {subsLoading ? (
+                <div className="h-5 w-24 bg-gray-100 rounded animate-pulse" />
+              ) : familyPlanner?.plan === 'pro' ? (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                  Pro {familyPlanner.billingCycle === 'yearly' ? '(Yearly)' : '(Monthly)'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
+                  Free Plan
+                </span>
+              )}
+            </div>
+
+            {/* Featured Programs */}
+            <div className="mb-5">
+              <p className="text-sm text-gray-500 mb-2">Featured Programs</p>
+              {subsLoading ? (
+                <div className="h-5 w-32 bg-gray-100 rounded animate-pulse" />
+              ) : featuredSubs.length > 0 ? (
+                <ul className="space-y-2">
+                  {featuredSubs.map((sub) => (
+                    <li key={sub.id} className="flex items-center gap-2 text-sm">
+                      <span className={`inline-block w-2 h-2 rounded-full ${sub.status === 'active' ? 'bg-green-500' : 'bg-yellow-400'}`} />
+                      <span className="text-gray-800">{sub.program_name}</span>
+                      <span className="text-xs text-gray-400 capitalize">({sub.status === 'trialing' ? 'trial' : sub.plan_type})</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-400">No featured programs</p>
+              )}
+            </div>
+
+            <button
+              onClick={() => router.push('/featured/setup')}
+              className="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              Feature Your Program →
-            </Link>
+              Feature Your Program
+            </button>
           </div>
         </div>
       </div>
