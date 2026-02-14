@@ -122,8 +122,16 @@ function filterCamps(camps: CampWithLocations[], filters: CampFilterState): Camp
     });
   }
 
-  // Neighborhood filter
-  if (filters.neighborhood.length > 0) {
+  // SF Only + Neighborhood filter
+  if (filters.sfOnly && filters.sfNeighborhoods && filters.sfNeighborhoods.length > 0) {
+    const allowed = filters.neighborhood.length > 0
+      ? filters.neighborhood
+      : filters.sfNeighborhoods;
+    filtered = filtered.filter((c) => {
+      if (!c.program_locations || c.program_locations.length === 0) return false;
+      return c.program_locations.some((loc) => allowed.includes(loc.neighborhood));
+    });
+  } else if (filters.neighborhood.length > 0) {
     filtered = filtered.filter((c) => {
       if (!c.program_locations || c.program_locations.length === 0) return false;
       return c.program_locations.some((loc) =>

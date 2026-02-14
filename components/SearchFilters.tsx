@@ -19,6 +19,8 @@ export interface FilterState {
   distanceMiles: number;
   userLat?: number;
   userLng?: number;
+  sfOnly: boolean;
+  sfNeighborhoods: string[];
 }
 
 export const DEFAULT_CATEGORIES = [
@@ -37,6 +39,8 @@ const defaultFilters: FilterState = {
   minRating: null,
   address: '',
   distanceMiles: 5,
+  sfOnly: true,
+  sfNeighborhoods: [],
 };
 
 export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
@@ -46,6 +50,7 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [neighborhoods, setNeighborhoods] = useState<string[]>([]);
+  const [sfNeighborhoodNames, setSfNeighborhoodNames] = useState<string[]>([]);
   const [geocoding, setGeocoding] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const initialLoadDone = useRef(false);
@@ -59,9 +64,10 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
     try {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
-        const parsed = JSON.parse(cached) as FilterState;
-        setFilters(parsed);
-        onFilterChange(parsed);
+        const parsed = JSON.parse(cached);
+        const sanitized: FilterState = { ...defaultFilters, ...parsed };
+        setFilters(sanitized);
+        onFilterChange(sanitized);
       }
     } catch (err) {
       console.error('Error loading cached filters:', err);
@@ -130,7 +136,44 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
     };
 
     fetchNeighborhoods();
+
+    // SF neighborhoods via coordinate bounding box (neighborhoods table city column is unreliable)
+    const fetchSfNeighborhoods = async () => {
+      try {
+        let query = supabase
+          .from('program_locations')
+          .select('neighborhood')
+          .gte('latitude', 37.70)
+          .lte('latitude', 37.84)
+          .gte('longitude', -122.52)
+          .lte('longitude', -122.35);
+        if (region.id) {
+          query = query.eq('region_id', region.id);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        const names = [...new Set(
+          (data || [])
+            .map((loc: { neighborhood: string }) => loc.neighborhood)
+            .filter((n: string) => n && n.trim() !== '')
+        )].sort();
+        setSfNeighborhoodNames(names);
+      } catch (err) {
+        console.error('Error fetching SF neighborhoods:', err);
+      }
+    };
+    fetchSfNeighborhoods();
   }, [region.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Push SF neighborhood names into filter state so the page filter function can use them
+  useEffect(() => {
+    if (sfNeighborhoodNames.length === 0) return;
+    setFilters(prev => {
+      const updated = { ...prev, sfNeighborhoods: sfNeighborhoodNames };
+      onFilterChange(updated);
+      return updated;
+    });
+  }, [sfNeighborhoodNames]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close sheet on outside click
   useEffect(() => {
@@ -174,6 +217,15 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
     setFilters(updated);
     onFilterChange(updated);
   };
+
+  const toggleSfOnly = () => {
+    handleFilterChange({ sfOnly: !filters.sfOnly, neighborhood: [] });
+  };
+
+  // Filter displayed neighborhoods based on SF Only toggle
+  const displayedNeighborhoods = filters.sfOnly
+    ? neighborhoods.filter(n => sfNeighborhoodNames.includes(n))
+    : neighborhoods;
 
   const toggleArrayFilter = (filterKey: 'category' | 'neighborhood', value: string) => {
     const current = filters[filterKey];
@@ -270,6 +322,18 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
             )}
           </button>
 
+          {/* SF Only Toggle */}
+          <button
+            onClick={toggleSfOnly}
+            className={`flex-shrink-0 px-3 py-2 rounded-full text-xs font-medium transition-all ${
+              filters.sfOnly
+                ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-500'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            SF Only
+          </button>
+
           {/* Quick Category Pills */}
           {['art', 'sports', 'music', 'technology'].map((cat) => (
             <button
@@ -361,15 +425,15 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
           {/* Sheet Container */}
           <div
             ref={sheetRef}
-            className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-hidden animate-slide-up sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:rounded-2xl sm:max-h-[80vh]"
+            className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden animate-slide-up sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:rounded-2xl sm:max-h-[80vh]"
           >
             {/* Handle Bar (mobile only) */}
-            <div className="sm:hidden flex justify-center pt-3 pb-2">
+            <div className="sm:hidden flex justify-center pt-3 pb-2 flex-shrink-0">
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">Filters</h2>
               <div className="flex items-center gap-3">
                 {activeFilterCount > 0 && (
@@ -392,7 +456,7 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto px-5 py-4 space-y-6" style={{ maxHeight: 'calc(85vh - 140px)' }}>
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-6">
               {/* Categories (collapsible) */}
               <div>
                 <button
@@ -554,30 +618,42 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
                 </div>
               </div>
 
-              {/* Neighborhoods (collapsible) */}
+              {/* Neighborhoods */}
               <div>
-                <button
-                  onClick={() => toggleSection('neighborhood')}
-                  className="w-full flex items-center justify-between text-sm font-semibold text-gray-900 mb-2"
-                >
-                  <span>
-                    Neighborhoods
-                    {filters.neighborhood.length > 0 && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                        {filters.neighborhood.length}
-                      </span>
-                    )}
-                  </span>
-                  <svg className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.has('neighborhood') ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    onClick={() => toggleSection('neighborhood')}
+                    className="flex items-center gap-1 text-sm font-semibold text-gray-900"
+                  >
+                    <span>
+                      Neighborhoods
+                      {filters.neighborhood.length > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                          {filters.neighborhood.length}
+                        </span>
+                      )}
+                    </span>
+                    <svg className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.has('neighborhood') ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={toggleSfOnly}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      filters.sfOnly
+                        ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-400'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {filters.sfOnly ? '\u2713 ' : ''}SF Only
+                  </button>
+                </div>
                 {expandedSections.has('neighborhood') && (
-                  neighborhoods.length === 0 ? (
+                  displayedNeighborhoods.length === 0 ? (
                     <p className="text-sm text-gray-500 italic">Loading neighborhoods...</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
-                      {neighborhoods.map((n) => (
+                      {displayedNeighborhoods.map((n) => (
                         <button
                           key={n}
                           onClick={() => toggleArrayFilter('neighborhood', n)}
@@ -596,8 +672,8 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50">
+            {/* Footer — extra bottom padding on mobile to clear the bottom nav */}
+            <div className="flex-shrink-0 px-5 pt-4 pb-20 sm:pb-4 border-t border-gray-100 bg-gray-50">
               <button
                 onClick={() => setIsSheetOpen(false)}
                 className="w-full py-4 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors shadow-lg"

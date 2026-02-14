@@ -60,14 +60,17 @@ export async function getUserPlan(email: string): Promise<'pro' | 'free'> {
     if (customers.data.length === 0) return 'free';
 
     const customerId = customers.data[0].id;
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'active',
-      limit: 10,
-    });
-
     const plannerPriceIds = Object.values(PLANNER_PRICE_IDS).filter(Boolean);
-    const hasPlannerSub = subscriptions.data.some(sub =>
+
+    // Check both active and trialing — Stripe puts subscriptions into 'trialing'
+    // when the Price has a default trial or trial_period_days is passed at checkout.
+    const [activeSubs, trialingSubs] = await Promise.all([
+      stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 10 }),
+      stripe.subscriptions.list({ customer: customerId, status: 'trialing', limit: 10 }),
+    ]);
+
+    const allSubs = [...activeSubs.data, ...trialingSubs.data];
+    const hasPlannerSub = allSubs.some(sub =>
       sub.items.data.some(item =>
         plannerPriceIds.includes(item.price.id)
       )

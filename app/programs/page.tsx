@@ -90,8 +90,16 @@ function filterPrograms(programs: ProgramWithLocations[], filters: FilterState):
     );
   }
 
-  // Neighborhood filter
-  if (filters.neighborhood.length > 0) {
+  // SF Only + Neighborhood filter
+  if (filters.sfOnly && filters.sfNeighborhoods && filters.sfNeighborhoods.length > 0) {
+    const allowed = filters.neighborhood.length > 0
+      ? filters.neighborhood
+      : filters.sfNeighborhoods;
+    filtered = filtered.filter((p) => {
+      if (!p.program_locations || p.program_locations.length === 0) return false;
+      return p.program_locations.some((loc) => allowed.includes(loc.neighborhood));
+    });
+  } else if (filters.neighborhood.length > 0) {
     filtered = filtered.filter((p) => {
       if (!p.program_locations || p.program_locations.length === 0) return false;
       return p.program_locations.some((loc) =>
