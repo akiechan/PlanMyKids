@@ -68,25 +68,14 @@ export async function middleware(request: NextRequest) {
   // Define protected routes
   const isAdminRoute = pathname.startsWith('/admin');
   const isAdminLoginPage = pathname === '/admin/login';
-  const isProfilePage = pathname === '/profile';
   const isFamilyDashboard = pathname === '/familyplanning/dashboard';
   const isFeaturedSetup = pathname === '/featured/setup';
   const isFeaturedLogin = pathname === '/featured/login';
   const isFamilyPlanningLogin = pathname === '/familyplanning/login';
 
-  // Routes that require any authentication (dashboard handles its own guest state)
-  const requiresAuth = isProfilePage || isFeaturedSetup;
-
-  // Protect routes that require authentication
-  if (requiresAuth && !session) {
-    // Redirect to appropriate login page based on which feature they're trying to access
-    if (isFeaturedSetup) {
-      const loginUrl = new URL('/featured/login', request.url);
-      return NextResponse.redirect(loginUrl);
-    }
-    // For other auth-required pages (profile, etc.), redirect to login
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('next', pathname);
+  // Protect featured setup (requires auth via middleware; profile handles auth client-side)
+  if (isFeaturedSetup && !session) {
+    const loginUrl = new URL('/featured/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
 

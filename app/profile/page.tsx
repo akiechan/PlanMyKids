@@ -15,7 +15,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/featured/login');
+      router.push('/login?next=/profile');
     }
   }, [user, authLoading, router]);
 
