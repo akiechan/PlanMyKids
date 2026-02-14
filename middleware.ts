@@ -68,16 +68,7 @@ export async function middleware(request: NextRequest) {
   // Define protected routes
   const isAdminRoute = pathname.startsWith('/admin');
   const isAdminLoginPage = pathname === '/admin/login';
-  const isFamilyDashboard = pathname === '/familyplanning/dashboard';
-  const isFeaturedSetup = pathname === '/featured/setup';
-  const isFeaturedLogin = pathname === '/featured/login';
   const isFamilyPlanningLogin = pathname === '/familyplanning/login';
-
-  // Protect featured setup (requires auth via middleware; profile handles auth client-side)
-  if (isFeaturedSetup && !session) {
-    const loginUrl = new URL('/featured/login', request.url);
-    return NextResponse.redirect(loginUrl);
-  }
 
   // Admin routes require login + admin email
   if (isAdminRoute && !isAdminLoginPage) {
@@ -95,12 +86,6 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect away from login pages if already authenticated
-  if (isFeaturedLogin && session) {
-    const redirectTo = request.nextUrl.searchParams.get('redirect') || '/featured/setup';
-    const redirectUrl = new URL(redirectTo, request.url);
-    return NextResponse.redirect(redirectUrl);
-  }
-
   if (isFamilyPlanningLogin && session) {
     const redirectUrl = new URL('/familyplanning/dashboard', request.url);
     return NextResponse.redirect(redirectUrl);

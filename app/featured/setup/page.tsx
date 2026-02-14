@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -53,6 +53,11 @@ function FeaturedSetupContent() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [planType, setPlanType] = useState<PlanType>('free_trial');
+
+  // Program search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -152,9 +157,27 @@ function FeaturedSetupContent() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/featured/login');
+      router.push('/login?next=/featured/setup');
     }
   }, [user, authLoading, router]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter programs based on search query
+  const filteredPrograms = searchQuery.trim()
+    ? existingPrograms.filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : existingPrograms;
 
   // Handle logo file selection
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -354,19 +377,93 @@ function FeaturedSetupContent() {
             {/* Program Selection */}
             <section>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Program</h2>
-              <select
-                value={isNewProgram ? 'new' : selectedProgramId || ''}
-                onChange={(e) => handleProgramSelect(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-              >
-                <option value="">Select an existing program...</option>
-                <option value="new">+ Add a new program</option>
-                {existingPrograms.map((program) => (
-                  <option key={program.id} value={program.id}>
-                    {program.name}
-                  </option>
-                ))}
-              </select>
+              <div ref={searchRef} className="relative">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={isNewProgram ? programData.name || 'New program' : selectedProgramId ? existingPrograms.find(p => p.id === selectedProgramId)?.name || '' : searchQuery}
+                    onChange={(e) => {
+                      if (isNewProgram || selectedProgramId) {
+                        setIsNewProgram(false);
+                        setSelectedProgramId(null);
+                      }
+                      setSearchQuery(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (!isNewProgram && !selectedProgramId) {
+                        setShowDropdown(true);
+                      }
+                    }}
+                    placeholder="Search for your program..."
+                    className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
+                  />
+                  {(isNewProgram || selectedProgramId) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsNewProgram(false);
+                        setSelectedProgramId(null);
+                        setSearchQuery('');
+                        setProgramData({ name: '', description: '', category: [], neighborhood: '', address: '', website: '', contact_email: '', contact_phone: '' });
+                        setShowDropdown(true);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {showDropdown && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleProgramSelect('new');
+                        setSearchQuery('');
+                        setShowDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border-b border-gray-100 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add a new program
+                    </button>
+                    {filteredPrograms.length > 0 ? (
+                      filteredPrograms.map((program) => (
+                        <button
+                          key={program.id}
+                          type="button"
+                          onClick={() => {
+                            handleProgramSelect(program.id);
+                            setSearchQuery('');
+                            setShowDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 text-sm text-gray-800 hover:bg-gray-50 border-b border-gray-50 last:border-b-0"
+                        >
+                          <span className="font-medium">{program.name}</span>
+                          {program.category && program.category.length > 0 && (
+                            <span className="block text-xs text-gray-400 mt-0.5">
+                              {program.category.slice(0, 3).join(', ')}
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    ) : searchQuery.trim() ? (
+                      <div className="px-4 py-3 text-sm text-gray-500">
+                        No programs found for &ldquo;{searchQuery}&rdquo;
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </section>
 
             {/* Program Details (for new programs or editing) */}
