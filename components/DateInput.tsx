@@ -470,7 +470,7 @@ export default function DateInput({
   value,
   onChange,
   label,
-  placeholder = 'Select date',
+  placeholder = 'MM/DD/YYYY',
   className = '',
   size = 'md',
   pastMonths = 12,
@@ -478,11 +478,25 @@ export default function DateInput({
   fixedPosition,
 }: DateInputProps) {
   const [open, setOpen] = useState(false);
+  const [typedValue, setTypedValue] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const sizeClasses = size === 'sm'
     ? 'py-1.5 px-2.5 text-sm'
     : 'py-2.5 px-3 text-sm';
+
+  // Sync typed value with external value
+  useEffect(() => {
+    if (value) {
+      const d = parseISO(value);
+      if (d) {
+        setTypedValue(`${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`);
+      }
+    } else {
+      setTypedValue('');
+    }
+  }, [value]);
 
   // Close on outside click (desktop)
   useEffect(() => {
@@ -504,35 +518,104 @@ export default function DateInput({
     setOpen(false);
   }, [onChange]);
 
+  // Auto-format typed input with slashes
+  function handleTypedChange(e: React.ChangeEvent<HTMLInputElement>) {
+    let raw = e.target.value.replace(/[^\d/]/g, '');
+
+    // Remove extra slashes
+    const parts = raw.split('/');
+    if (parts.length > 3) {
+      raw = parts.slice(0, 3).join('/');
+    }
+
+    // Auto-add slash after MM and DD
+    const digits = raw.replace(/\//g, '');
+    if (digits.length >= 2 && !raw.includes('/')) {
+      raw = digits.slice(0, 2) + '/' + digits.slice(2);
+    }
+    if (digits.length >= 4 && raw.split('/').length < 3) {
+      const p = raw.split('/');
+      if (p.length === 2 && p[1].length >= 2) {
+        raw = p[0] + '/' + p[1].slice(0, 2) + '/' + p[1].slice(2);
+      }
+    }
+
+    // Limit total length
+    if (raw.length > 10) raw = raw.slice(0, 10);
+
+    setTypedValue(raw);
+
+    // Try to parse complete date
+    const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (match) {
+      const [, mm, dd, yyyy] = match;
+      const m = parseInt(mm, 10);
+      const d = parseInt(dd, 10);
+      const y = parseInt(yyyy, 10);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= 2100) {
+        const date = new Date(y, m - 1, d);
+        if (date.getMonth() === m - 1 && date.getDate() === d) {
+          onChange(toISO(date));
+        }
+      }
+    }
+  }
+
+  function handleBlur() {
+    // On blur, if typed value doesn't produce a valid date, revert
+    const match = typedValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match && typedValue) {
+      // Revert to current value
+      if (value) {
+        const d = parseISO(value);
+        if (d) {
+          setTypedValue(`${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`);
+        }
+      } else {
+        setTypedValue('');
+      }
+    }
+  }
+
   return (
     <div className={className} ref={containerRef}>
       {label && (
         <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
       )}
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          className={`flex items-center gap-2 w-full ${sizeClasses} bg-white border border-gray-200 rounded-lg cursor-pointer transition-all hover:border-blue-400 hover:shadow-sm ${open ? 'ring-2 ring-blue-500 border-transparent' : ''}`}
-        >
-          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-            {value ? formatDisplay(value) : placeholder}
-          </span>
+        <div className={`flex items-center gap-2 w-full ${sizeClasses} bg-white border border-gray-200 rounded-lg transition-all hover:border-blue-400 hover:shadow-sm ${open ? 'ring-2 ring-blue-500 border-transparent' : ''}`}>
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            className="flex-shrink-0 p-0.5 text-gray-400 hover:text-blue-500 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </button>
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            value={typedValue}
+            onChange={handleTypedChange}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            className="flex-1 min-w-0 bg-transparent outline-none text-gray-900 placeholder-gray-400"
+            style={{ fontSize: '16px' }}
+          />
           {value && (
             <span
               role="button"
               onClick={e => { e.stopPropagation(); onChange(''); setOpen(false); }}
-              className="ml-auto p-0.5 text-gray-300 hover:text-red-500 transition-colors"
+              className="flex-shrink-0 p-0.5 text-gray-300 hover:text-red-500 transition-colors cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </span>
           )}
-        </button>
+        </div>
 
         <CalendarPanel open={open} onClose={() => setOpen(false)} containerRef={containerRef} fixedPosition={fixedPosition}>
           <ScrollCalendar

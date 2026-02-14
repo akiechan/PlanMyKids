@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,6 +11,15 @@ function getSupabaseClient() {
 }
 
 export async function GET(request: NextRequest) {
+  const isDryRun = request.nextUrl.searchParams.get('dryRun') !== 'false';
+  if (isDryRun) {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+  } else {
+    const auth = await verifyCriticalAdmin(request);
+    if ('error' in auth) return auth.error;
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const dryRun = searchParams.get('dryRun') !== 'false';
 

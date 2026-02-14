@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,8 +11,11 @@ function getSupabaseClient() {
 }
 
 // GET - List all scheduled jobs
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
 
     const { data, error } = await supabase
@@ -40,6 +44,9 @@ export async function GET() {
 // POST - Create a new scheduled job
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const body = await request.json();
     const {
       name,
@@ -106,6 +113,9 @@ export async function POST(request: NextRequest) {
 // DELETE - Delete a scheduled job by ID (passed in body)
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = await verifyCriticalAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const body = await request.json();
     const { id } = body;
 

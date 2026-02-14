@@ -8,6 +8,23 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .filter(Boolean);
 
 export async function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || '';
+  const pathname = request.nextUrl.pathname;
+
+  // Subdomain enforcement: redirect admin pages to admin.planmykids.org in production
+  if (
+    pathname.startsWith('/admin') &&
+    !hostname.includes('localhost') &&
+    !hostname.includes('127.0.0.1') &&
+    !hostname.startsWith('admin.planmykids.org')
+  ) {
+    const redirectUrl = new URL(
+      pathname + request.nextUrl.search,
+      'https://admin.planmykids.org'
+    );
+    return NextResponse.redirect(redirectUrl, 301);
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -62,8 +79,6 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired - this will update the cookies
   const { data: { session } } = await supabase.auth.getSession();
-
-  const pathname = request.nextUrl.pathname;
 
   // Define protected routes
   const isAdminRoute = pathname.startsWith('/admin');

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getNeighborhoodAliases, getGenericNeighborhoodNames } from '@/lib/neighborhoods';
 import { getDefaultRegion } from '@/lib/regions';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   return createClient(
@@ -52,6 +53,9 @@ async function getNeighborhoodFromAddress(address: string, apiKey: string, regio
 
 // GET: List locations that need neighborhood updates
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const programType = request.nextUrl.searchParams.get('programType') || 'program';
   const filter = request.nextUrl.searchParams.get('filter') || 'missing'; // 'missing', 'generic', 'all'
 
@@ -98,6 +102,9 @@ export async function GET(request: NextRequest) {
 
 // POST: Update neighborhoods from Google Geocoding
 export async function POST(request: NextRequest) {
+  const auth = await verifyCriticalAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const body = await request.json();
   const { locationIds, dryRun = true } = body;
 

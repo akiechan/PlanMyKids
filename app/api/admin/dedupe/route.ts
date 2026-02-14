@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -36,8 +37,11 @@ function countNonNullFields(record: Record<string, unknown>): number {
 }
 
 // GET: Preview duplicates
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
 
     const { data: programs, error } = await supabase
@@ -110,6 +114,9 @@ export async function GET() {
 // POST: Actually remove duplicates
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCriticalAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
     const body = await request.json();
     const { confirm } = body;

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useReauthAction } from '@/hooks/useReauthAction';
+import { ReauthDialog } from '@/components/ReauthDialog';
 
 interface MergeGroup {
   canonical: string;
@@ -38,6 +40,7 @@ export default function MergePage() {
   const [editingCanonical, setEditingCanonical] = useState(false);
   const [canonicalInput, setCanonicalInput] = useState('');
   const [programType, setProgramType] = useState<'all' | 'program' | 'camp'>('all');
+  const { executeWithReauth, needsReauth, reauthMessage, handleReauth, dismissReauth } = useReauthAction();
 
   useEffect(() => {
     fetchData();
@@ -61,11 +64,12 @@ export default function MergePage() {
     setMerging(key);
 
     try {
-      const response = await fetch('/api/admin/merge-data', {
+      const response = await executeWithReauth(() => fetch('/api/admin/merge-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, canonical, variants }),
-      });
+      }));
+      if (!response) return;
 
       const result = await response.json();
 
@@ -437,6 +441,7 @@ export default function MergePage() {
           )}
         </div>
       </div>
+      <ReauthDialog isOpen={needsReauth} message={reauthMessage} onReauth={handleReauth} onCancel={dismissReauth} />
     </div>
   );
 }

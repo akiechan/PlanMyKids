@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useReauthAction } from '@/hooks/useReauthAction';
+import { ReauthDialog } from '@/components/ReauthDialog';
 
 interface ProgramToEnrich {
   id: string;
@@ -59,6 +61,7 @@ export default function GoogleEnrichPage() {
   const [enrichResults, setEnrichResults] = useState<EnrichResult[] | null>(null);
   const [programType, setProgramType] = useState<'camp' | 'program'>('camp');
   const [filter, setFilter] = useState<'address' | 'reviews' | 'all'>('reviews');
+  const { executeWithReauth, needsReauth, reauthMessage, handleReauth, dismissReauth } = useReauthAction();
 
   useEffect(() => {
     fetchPrograms();
@@ -124,14 +127,15 @@ export default function GoogleEnrichPage() {
     setEnrichResults(null);
 
     try {
-      const response = await fetch('/api/admin/google-enrich', {
+      const response = await executeWithReauth(() => fetch('/api/admin/google-enrich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           programIds: Array.from(selectedIds),
           dryRun,
         }),
-      });
+      }));
+      if (!response) return;
 
       const data = await response.json();
       setEnrichResults(data.results || []);
@@ -495,6 +499,7 @@ export default function GoogleEnrichPage() {
           </div>
         )}
       </div>
+      <ReauthDialog isOpen={needsReauth} message={reauthMessage} onReauth={handleReauth} onCancel={dismissReauth} />
     </div>
   );
 }

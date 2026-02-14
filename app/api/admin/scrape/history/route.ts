@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -12,6 +13,9 @@ function getSupabaseClient() {
 // GET - List scrape history
 export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
@@ -82,6 +86,9 @@ export async function GET(request: NextRequest) {
 // GET single history entry with items
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const body = await request.json();
     const { historyId } = body;
 

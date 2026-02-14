@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,6 +11,9 @@ function getSupabaseClient() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyCriticalAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const supabase = getSupabaseClient();
 
   // Update all camps to be summer, weekly

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -12,6 +13,9 @@ function getSupabaseClient() {
 // POST - Update all programs with age_min=5, age_max=18 to age_min=0
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCriticalAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
 
     // First, count how many programs will be affected
@@ -77,6 +81,9 @@ export async function POST(request: NextRequest) {
 // GET - Preview how many programs will be affected
 export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
 
     const { data, count, error } = await supabase

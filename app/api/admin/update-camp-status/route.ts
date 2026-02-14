@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,8 +11,11 @@ function getSupabaseClient() {
 }
 
 // GET: Preview what will be updated
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
     const today = new Date().toISOString().split('T')[0];
 
@@ -68,8 +72,11 @@ export async function GET() {
 }
 
 // POST: Actually update statuses
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCriticalAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
     const today = new Date().toISOString().split('T')[0];
 

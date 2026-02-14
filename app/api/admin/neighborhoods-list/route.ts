@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   return createClient(
@@ -10,7 +11,10 @@ function getSupabaseClient() {
 }
 
 // GET: List all active programs/camps with their location data
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
@@ -57,6 +61,9 @@ export async function GET() {
 
 // PATCH: Update a single location's neighborhood
 export async function PATCH(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const body = await request.json();
   const { locationId, neighborhood, latitude, longitude } = body;
 

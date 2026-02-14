@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getDefaultRegion } from '@/lib/regions';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -82,6 +83,9 @@ function parseAddress(formattedAddress: string): { address: string; city: string
 
 // GET: List programs needing address enrichment or preview a single lookup
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const searchParams = request.nextUrl.searchParams;
   const action = searchParams.get('action') || 'list';
   const programId = searchParams.get('programId');
@@ -203,6 +207,9 @@ export async function GET(request: NextRequest) {
 
 // POST: Apply Google enrichment to programs
 export async function POST(request: NextRequest) {
+  const auth = await verifyCriticalAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const body = await request.json();
   const { programIds, dryRun = true } = body;
 

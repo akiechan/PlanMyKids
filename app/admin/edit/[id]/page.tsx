@@ -9,6 +9,8 @@ import { useAdminLogger } from '@/hooks/useAdminLogger';
 import DateInput from '@/components/DateInput';
 import { DateRangePicker } from '@/components/DateInput';
 import { useRegion } from '@/contexts/RegionContext';
+import { useReauthAction } from '@/hooks/useReauthAction';
+import { ReauthDialog } from '@/components/ReauthDialog';
 
 interface DeleteInfo {
   warnings: string[];
@@ -23,6 +25,7 @@ export default function EditProgramPage({ params }: { params: { id: string } }) 
   const router = useRouter();
   const { logAction } = useAdminLogger();
   const { region } = useRegion();
+  const { executeWithReauth, needsReauth, reauthMessage, handleReauth, dismissReauth } = useReauthAction();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -244,9 +247,10 @@ export default function EditProgramPage({ params }: { params: { id: string } }) 
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/admin/programs/${params.id}`, {
+      const response = await executeWithReauth(() => fetch(`/api/admin/programs/${params.id}`, {
         method: 'DELETE',
-      });
+      }));
+      if (!response) return; // re-auth dialog is showing
       const data = await response.json();
 
       if (!response.ok) {
@@ -939,6 +943,7 @@ export default function EditProgramPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       )}
+      <ReauthDialog isOpen={needsReauth} message={reauthMessage} onReauth={handleReauth} onCancel={dismissReauth} />
     </div>
   );
 }

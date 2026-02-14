@@ -10,6 +10,8 @@ import DateInput from '@/components/DateInput';
 import type { HoursPerDay } from '@/types/database';
 import { useAdminLogger } from '@/hooks/useAdminLogger';
 import { useRegion } from '@/contexts/RegionContext';
+import { useReauthAction } from '@/hooks/useReauthAction';
+import { ReauthDialog } from '@/components/ReauthDialog';
 
 interface ExistingProgram {
   id: string;
@@ -31,6 +33,7 @@ export default function AdminAddProgramPage() {
   const router = useRouter();
   const { logAction } = useAdminLogger();
   const { region } = useRegion();
+  const { executeWithReauth, needsReauth, reauthMessage, handleReauth, dismissReauth } = useReauthAction();
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scraping, setScraping] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -453,9 +456,10 @@ export default function AdminAddProgramPage() {
 
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/admin/programs/${selectedProgramId}`, {
+      const response = await executeWithReauth(() => fetch(`/api/admin/programs/${selectedProgramId}`, {
         method: 'DELETE',
-      });
+      }));
+      if (!response) return; // re-auth dialog is showing
       const data = await response.json();
 
       if (!response.ok) {
@@ -1179,6 +1183,7 @@ export default function AdminAddProgramPage() {
           </div>
         </div>
       )}
+      <ReauthDialog isOpen={needsReauth} message={reauthMessage} onReauth={handleReauth} onCancel={dismissReauth} />
     </div>
   );
 }

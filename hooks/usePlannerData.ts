@@ -345,10 +345,10 @@ export function usePlannerData(authUserId?: string | null): UsePlannerDataReturn
       const custom = sp.custom_program_data as SaveProgramArgs['customProgramData'];
       const isCustom = !sp.program_id && !!custom;
 
-      // Build assignedKids array
+      // Build assignedKids array — expand 'all' to actual kid IDs
       let assignedKids: string[] = [];
       if (sp.assign_all_kids) {
-        assignedKids = ['all'];
+        assignedKids = mappedKids.map(k => k.id);
       } else if (sp.kids?.length) {
         assignedKids = sp.kids.map((k: { kid_id: string }) => k.kid_id);
       }
@@ -773,10 +773,9 @@ export function usePlannerData(authUserId?: string | null): UsePlannerDataReturn
     if (updates.dropoffAdult !== undefined) dbUpdates.dropoff_adult_id = updates.dropoffAdult || null;
     if (updates.pickupAdult !== undefined) dbUpdates.pickup_adult_id = updates.pickupAdult || null;
 
-    // Kid assignments handled separately
+    // Kid assignments handled separately — always store individual kid IDs
     if (updates.assignedKids !== undefined) {
-      const isAll = updates.assignedKids.length === 1 && updates.assignedKids[0] === 'all';
-      dbUpdates.assign_all_kids = isAll;
+      dbUpdates.assign_all_kids = false;
 
       // Update junction table
       await supabase
@@ -784,7 +783,7 @@ export function usePlannerData(authUserId?: string | null): UsePlannerDataReturn
         .delete()
         .eq('saved_program_id', prog._savedProgramId);
 
-      if (!isAll && updates.assignedKids.length > 0) {
+      if (updates.assignedKids.length > 0) {
         await supabase.from('planner_program_kids').insert(
           updates.assignedKids.map(kid_id => ({
             saved_program_id: prog._savedProgramId!,

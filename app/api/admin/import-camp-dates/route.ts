@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -129,6 +130,9 @@ function normalizeWebsite(url: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const supabase = getSupabaseClient();
     const body = await request.json();
     const { csvData } = body;
@@ -260,8 +264,11 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to fetch parsed CSV data for preview
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     // Read and parse the CSV file
     const fs = await import('fs/promises');
     const path = await import('path');

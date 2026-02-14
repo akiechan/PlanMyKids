@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useAdminLogger } from '@/hooks/useAdminLogger';
 import { useRegion } from '@/contexts/RegionContext';
+import { useReauthAction } from '@/hooks/useReauthAction';
+import { ReauthDialog } from '@/components/ReauthDialog';
 
 type TabType = 'manual' | 'scheduled' | 'history';
 
@@ -157,6 +159,7 @@ interface ScrapedUpdate {
 export default function MassUpdatePage() {
   const { logAction } = useAdminLogger();
   const { region } = useRegion();
+  const { executeWithReauth, needsReauth, reauthMessage, handleReauth, dismissReauth } = useReauthAction();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
@@ -326,11 +329,12 @@ export default function MassUpdatePage() {
     if (!confirm('Are you sure you want to delete this scheduled job?')) return;
 
     try {
-      const response = await fetch('/api/admin/scrape/schedule', {
+      const response = await executeWithReauth(() => fetch('/api/admin/scrape/schedule', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
-      });
+      }));
+      if (!response) return; // re-auth dialog is showing
 
       if (response.ok) {
         fetchScheduledJobs();
@@ -345,7 +349,7 @@ export default function MassUpdatePage() {
     setScrapeProgress(null);
 
     try {
-      const response = await fetch('/api/admin/scrape/run', {
+      const response = await executeWithReauth(() => fetch('/api/admin/scrape/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -355,7 +359,8 @@ export default function MassUpdatePage() {
           onlyMissing: false,
           runType: 'manual',
         }),
-      });
+      }));
+      if (!response) return; // re-auth dialog is showing
 
       if (response.ok) {
         const data = await response.json();
@@ -2499,6 +2504,7 @@ export default function MassUpdatePage() {
           )}
         </div>
       )}
+      <ReauthDialog isOpen={needsReauth} message={reauthMessage} onReauth={handleReauth} onCancel={dismissReauth} />
     </div>
   );
 }

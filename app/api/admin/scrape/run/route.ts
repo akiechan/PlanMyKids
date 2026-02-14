@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
+import { verifyCriticalAdmin } from '@/lib/admin-auth';
 
 const execAsync = promisify(exec);
 
@@ -17,6 +18,9 @@ function getSupabaseClient() {
 // POST - Start a scrape run (returns history ID for progress tracking)
 export async function POST(request: NextRequest) {
   try {
+    const auth = await verifyCriticalAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const body = await request.json();
     const {
       programIds,

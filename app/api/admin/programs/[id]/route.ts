@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { clearCampsCache } from '@/lib/api-cache';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -20,6 +21,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const programId = params.id;
     const supabase = getSupabaseClient();
 
@@ -115,6 +119,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await verifyAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const programId = params.id;
     const supabase = getSupabaseClient();
     const body = await request.json();
@@ -193,6 +200,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await verifyCriticalAdmin(request);
+    if ('error' in auth) return auth.error;
+
     const programId = params.id;
     const supabase = getSupabaseClient();
 

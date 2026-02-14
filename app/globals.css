@@ -18,6 +18,13 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* Prevent iOS Safari zoom on input focus (requires font-size >= 16px) */
+@media screen and (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 @layer components {
   /* Mobile-first button sizes - larger touch targets on mobile */
   .btn-primary {

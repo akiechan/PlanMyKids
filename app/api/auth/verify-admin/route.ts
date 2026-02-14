@@ -49,6 +49,26 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Require authentication — prevent unauthenticated admin enumeration
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
+    }
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    return NextResponse.json({ isAdmin: false, error: 'Not authenticated' }, { status: 401 });
+  }
+
   const { email } = await request.json();
   if (!email) {
     return NextResponse.json({ isAdmin: false }, { status: 400 });

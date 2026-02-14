@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, verifyCriticalAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -139,6 +140,9 @@ function findMergeGroups(items: { value: string; count: number }[], distinctSet:
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const searchParams = request.nextUrl.searchParams;
   const type = searchParams.get('type') || 'all';
   const programType = searchParams.get('programType') || 'all'; // 'all', 'program', 'camp'
@@ -223,6 +227,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyCriticalAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const body = await request.json();
   const { type, canonical, variants } = body;
 

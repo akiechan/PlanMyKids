@@ -701,12 +701,7 @@ export default function SaveDashboardPage() {
         await hookUpdateProgram(programId, { assignedKids: currentKids.filter(k => k !== kidId) });
       } else {
         const newKids = [...currentKids, kidId];
-        // If all kids are now selected, store as ['all']
-        if (kids.length > 0 && newKids.length >= kids.length) {
-          await hookUpdateProgram(programId, { assignedKids: ['all'] });
-        } else {
-          await hookUpdateProgram(programId, { assignedKids: newKids });
-        }
+        await hookUpdateProgram(programId, { assignedKids: newKids });
       }
     } catch {
       alert('Failed to update kid assignment.');
@@ -833,9 +828,6 @@ export default function SaveDashboardPage() {
         return { ...prev, assignedKids: currentKids.filter(k => k !== kidId) };
       } else {
         const newKids = [...currentKids, kidId];
-        if (kids.length > 0 && newKids.length >= kids.length) {
-          return { ...prev, assignedKids: ['all'] };
-        }
         return { ...prev, assignedKids: newKids };
       }
     });
@@ -4418,9 +4410,6 @@ export default function SaveDashboardPage() {
                                 current = current.filter(k => k !== kid.id);
                               } else {
                                 current = [...current, kid.id];
-                              }
-                              if (kids.length > 0 && current.length >= kids.length) {
-                                return { ...prev, assignedKids: ['all'] };
                               }
                               return { ...prev, assignedKids: current };
                             });

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useReauthAction } from '@/hooks/useReauthAction';
+import { ReauthDialog } from '@/components/ReauthDialog';
 
 interface DuplicateGroup {
   name: string;
@@ -30,6 +32,7 @@ export default function DedupePage() {
   const [processing, setProcessing] = useState(false);
   const [results, setResults] = useState<DedupeResult | null>(null);
   const [error, setError] = useState('');
+  const { executeWithReauth, needsReauth, reauthMessage, handleReauth, dismissReauth } = useReauthAction();
 
   useEffect(() => {
     fetchPreview();
@@ -61,11 +64,12 @@ export default function DedupePage() {
     setResults(null);
 
     try {
-      const response = await fetch('/api/admin/dedupe', {
+      const response = await executeWithReauth(() => fetch('/api/admin/dedupe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirm: true }),
-      });
+      }));
+      if (!response) return;
 
       const data = await response.json();
       if (data.success) {
@@ -237,6 +241,7 @@ export default function DedupePage() {
           <p className="text-green-600">Your database has no duplicate programs within the same type.</p>
         </div>
       )}
+      <ReauthDialog isOpen={needsReauth} message={reauthMessage} onReauth={handleReauth} onCancel={dismissReauth} />
     </div>
   );
 }

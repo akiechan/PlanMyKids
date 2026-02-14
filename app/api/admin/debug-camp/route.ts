@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin } from '@/lib/admin-auth';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,6 +11,9 @@ function getSupabaseClient() {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if ('error' in auth) return auth.error;
+
   const searchParams = request.nextUrl.searchParams;
   const name = searchParams.get('name') || 'acrosports';
 
