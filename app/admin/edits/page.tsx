@@ -34,6 +34,32 @@ export default function AdminEditsPage() {
   const [mergedData, setMergedData] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
+  // Check if an edit request has any actual changes compared to the original program
+  const hasNoChanges = (editedData: any, original: any): boolean => {
+    if (!original) return false;
+
+    const fieldsToCompare = [
+      'name', 'description',
+      'price_min', 'price_max', 'price_unit',
+      'provider_website', 'contact_email', 'contact_phone',
+      'registration_url', 'new_registration_date', 're_enrollment_date',
+    ];
+
+    for (const field of fieldsToCompare) {
+      if (editedData[field] === undefined) continue;
+      const edited = editedData[field] ?? null;
+      const orig = original[field] ?? null;
+      if (JSON.stringify(edited) !== JSON.stringify(orig)) return false;
+    }
+
+    // Check category array
+    if (editedData.category !== undefined) {
+      if (JSON.stringify(editedData.category) !== JSON.stringify(original.category)) return false;
+    }
+
+    return true;
+  };
+
   useEffect(() => {
     fetchEditRequests();
   }, [statusFilter]);
@@ -74,7 +100,33 @@ export default function AdminEditsPage() {
         })
       );
 
-      setEditRequests(requestsWithPrograms);
+      // Auto-approve pending requests with no actual changes
+      if (statusFilter === 'pending') {
+        const noChangeRequests = requestsWithPrograms.filter(
+          (r) => r.original_program && hasNoChanges(r.edited_data, r.original_program)
+        );
+
+        if (noChangeRequests.length > 0) {
+          console.log(`Auto-approving ${noChangeRequests.length} no-change edit(s)`);
+          await Promise.all(
+            noChangeRequests.map((r) =>
+              supabase
+                .from('program_edit_requests')
+                .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+                .eq('id', r.id)
+            )
+          );
+          // Filter them out of the displayed list
+          const remaining = requestsWithPrograms.filter(
+            (r) => !noChangeRequests.some((nc) => nc.id === r.id)
+          );
+          setEditRequests(remaining);
+        } else {
+          setEditRequests(requestsWithPrograms);
+        }
+      } else {
+        setEditRequests(requestsWithPrograms);
+      }
     } catch (err) {
       console.error('Error fetching edit requests:', err);
       setError(err instanceof Error ? err.message : 'Failed to load edit requests');
