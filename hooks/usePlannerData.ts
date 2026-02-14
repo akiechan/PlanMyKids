@@ -313,7 +313,11 @@ export function usePlannerData(authUserId?: string | null): UsePlannerDataReturn
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(),
-      fetch('/api/user/subscriptions').then(r => r.json()).catch(() => null),
+      supabase.auth.getSession().then(({ data: { session: s } }) =>
+        fetch('/api/user/subscriptions', {
+          headers: s?.access_token ? { 'Authorization': `Bearer ${s.access_token}` } : {},
+        }).then(r => r.json()).catch(() => null)
+      ),
     ]);
 
     // Transform kids

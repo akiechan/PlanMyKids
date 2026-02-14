@@ -143,6 +143,7 @@ export default function SaveDashboardPage() {
   const {
     kids, adults, programs, todos, reminders, subscription,
     discrepancyDismissed, preferences, loading: plannerLoading, needsDowngrade,
+    refresh: refreshPlannerData,
     addKid: hookAddKid, updateKid: hookUpdateKid, removeKid: hookRemoveKid,
     addAdult: hookAddAdult, updateAdult: hookUpdateAdult, removeAdult: hookRemoveAdult,
     saveProgram: hookSaveProgram, updateProgram: hookUpdateProgram,
@@ -307,12 +308,13 @@ export default function SaveDashboardPage() {
       .catch(() => {});
   }, [user]);
 
-  // Check for upgrade success redirect
+  // Check for upgrade success redirect — re-fetch subscription so Pro features work immediately
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('upgraded') === 'true') {
       setShowUpgradeBanner(true);
       window.history.replaceState({}, '', '/familyplanning/dashboard');
+      refreshPlannerData();
     }
   }, []);
 

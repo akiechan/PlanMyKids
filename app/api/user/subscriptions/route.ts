@@ -19,10 +19,22 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // Get the current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Get the current session — try cookies first, then Authorization header
+    let session = (await supabase.auth.getSession()).data.session;
 
-    if (sessionError || !session) {
+    if (!session) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        const { data } = await supabase.auth.getUser(token);
+        if (data.user) {
+          // Create a minimal session-like object for userId extraction
+          session = { user: data.user } as any;
+        }
+      }
+    }
+
+    if (!session) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -138,8 +150,8 @@ export async function GET(request: NextRequest) {
       email: session.user.email,
     });
 
-    // Private cache -- user-specific data, cache for 60s
-    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+    // No cache — subscription status must always be fresh (especially after upgrades)
+    response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
     return response;
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
