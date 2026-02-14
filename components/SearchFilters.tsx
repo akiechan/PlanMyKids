@@ -55,6 +55,8 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const initialLoadDone = useRef(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number | null>(null);
+  const [sheetDragY, setSheetDragY] = useState(0);
 
   // Load cached filters from localStorage on mount
   useEffect(() => {
@@ -210,6 +212,23 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
       else next.add(section);
       return next;
     });
+  };
+
+  // Drag-to-close handlers for the mobile sheet
+  const handleTouchStart = (e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragStartY.current === null) return;
+    const dy = e.touches[0].clientY - dragStartY.current;
+    if (dy > 0) setSheetDragY(dy);
+  };
+  const handleTouchEnd = () => {
+    if (sheetDragY > 120) {
+      setIsSheetOpen(false);
+    }
+    setSheetDragY(0);
+    dragStartY.current = null;
   };
 
   const handleFilterChange = (newFilters: Partial<FilterState>) => {
@@ -426,9 +445,15 @@ export default function SearchFilters({ onFilterChange }: SearchFiltersProps) {
           <div
             ref={sheetRef}
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden animate-slide-up sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:rounded-2xl sm:max-h-[80vh]"
+            style={sheetDragY > 0 ? { transform: `translateY(${sheetDragY}px)`, transition: 'none' } : undefined}
           >
-            {/* Handle Bar (mobile only) */}
-            <div className="sm:hidden flex justify-center pt-3 pb-2 flex-shrink-0">
+            {/* Handle Bar — drag to close on mobile */}
+            <div
+              className="sm:hidden flex justify-center pt-3 pb-2 flex-shrink-0 cursor-grab"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
 

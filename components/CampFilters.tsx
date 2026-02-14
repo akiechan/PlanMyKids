@@ -88,6 +88,8 @@ export default function CampFilters({ onFilterChange }: CampFiltersProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const initialLoadDone = useRef(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number | null>(null);
+  const [sheetDragY, setSheetDragY] = useState(0);
 
   // Fetch unique neighborhoods from the database (scoped to current region)
   useEffect(() => {
@@ -257,6 +259,23 @@ export default function CampFilters({ onFilterChange }: CampFiltersProps) {
     });
   };
 
+  // Drag-to-close handlers for the mobile sheet
+  const handleTouchStart = (e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragStartY.current === null) return;
+    const dy = e.touches[0].clientY - dragStartY.current;
+    if (dy > 0) setSheetDragY(dy); // only allow dragging down
+  };
+  const handleTouchEnd = () => {
+    if (sheetDragY > 120) {
+      setIsSheetOpen(false);
+    }
+    setSheetDragY(0);
+    dragStartY.current = null;
+  };
+
   const toggleSeason = (season: string) => {
     const newSeasons = filters.season.includes(season)
       ? filters.season.filter(s => s !== season)
@@ -400,21 +419,6 @@ export default function CampFilters({ onFilterChange }: CampFiltersProps) {
             SF Only
           </button>
 
-          {/* Quick Season Pills */}
-          {CAMP_SEASONS.map((season) => (
-            <button
-              key={season.value}
-              onClick={() => toggleSeason(season.value)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
-                filters.season.includes(season.value)
-                  ? 'bg-green-100 text-green-700 ring-2 ring-green-500'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {season.emoji} {season.label}
-            </button>
-          ))}
-
           {/* Days Format Pills */}
           {DAYS_FORMATS.map((format) => (
             <button
@@ -426,9 +430,23 @@ export default function CampFilters({ onFilterChange }: CampFiltersProps) {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {format.emoji} {format.label}
+              {format.label}
             </button>
           ))}
+
+          {/* Price Range Pill */}
+          <button
+            onClick={() => { setIsSheetOpen(true); setExpandedSections(prev => new Set([...prev, 'price'])); }}
+            className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+              filters.priceMin !== null || filters.priceMax !== null
+                ? 'bg-green-100 text-green-700 ring-2 ring-green-500'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {filters.priceMin !== null || filters.priceMax !== null
+              ? `$${filters.priceMin ?? 0}–$${filters.priceMax ?? '∞'}`
+              : 'Price Range'}
+          </button>
         </div>
 
         {/* Active Filters Display */}
@@ -532,9 +550,15 @@ export default function CampFilters({ onFilterChange }: CampFiltersProps) {
           <div
             ref={sheetRef}
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slide-up sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:rounded-2xl sm:max-h-[85vh]"
+            style={sheetDragY > 0 ? { transform: `translateY(${sheetDragY}px)`, transition: 'none' } : undefined}
           >
-            {/* Handle Bar */}
-            <div className="sm:hidden flex justify-center pt-3 pb-2 flex-shrink-0">
+            {/* Handle Bar — drag to close on mobile */}
+            <div
+              className="sm:hidden flex justify-center pt-3 pb-2 flex-shrink-0 cursor-grab"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
 
